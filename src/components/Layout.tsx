@@ -19,58 +19,73 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent mb-2">
+          <h1 
+            className="text-5xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent mb-2"
+            style={{
+              filter: 'drop-shadow(0 0 30px hsl(280 100% 70% / 0.7)) drop-shadow(0 0 60px hsl(320 100% 70% / 0.5))',
+              textShadow: '0 0 40px hsl(280 100% 70% / 0.6)'
+            }}
+          >
             WhatsApp Sender
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-foreground/80 text-base">
             Современная панель для управления рассылкой сообщений
           </p>
         </div>
 
-        <Tabs value={getActiveTab()} className="mb-6">
-          <TabsList className="grid w-full grid-cols-5 bg-card border border-border">
-            <TabsTrigger
-              value="send"
-              onClick={() => navigate("/")}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Отправить
-            </TabsTrigger>
-            <TabsTrigger
-              value="profiles"
-              onClick={() => navigate("/profiles")}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Профили
-            </TabsTrigger>
-            <TabsTrigger
-              value="create"
-              onClick={() => navigate("/create-profile")}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Создать
-            </TabsTrigger>
-            <TabsTrigger
-              value="mass"
-              onClick={() => navigate("/mass-send")}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Массовая рассылка
-            </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              onClick={() => navigate("/analytics")}
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Аналитика
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="mb-6 space-y-3">
+          {/* First row - 3 buttons */}
+          <Tabs value={getActiveTab()}>
+            <TabsList className="grid w-full grid-cols-3 bg-card border border-border/50 h-12">
+              <TabsTrigger
+                value="send"
+                onClick={() => navigate("/")}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(280_100%_70%/0.5)] transition-all"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Отправить
+              </TabsTrigger>
+              <TabsTrigger
+                value="profiles"
+                onClick={() => navigate("/profiles")}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(280_100%_70%/0.5)] transition-all"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Профили
+              </TabsTrigger>
+              <TabsTrigger
+                value="create"
+                onClick={() => navigate("/create-profile")}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(280_100%_70%/0.5)] transition-all"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Создать
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Second row - 2 buttons */}
+          <Tabs value={getActiveTab()}>
+            <TabsList className="grid w-full grid-cols-2 bg-card border border-border/50 h-12">
+              <TabsTrigger
+                value="mass"
+                onClick={() => navigate("/mass-send")}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(280_100%_70%/0.5)] transition-all"
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Массовая рассылка
+              </TabsTrigger>
+              <TabsTrigger
+                value="analytics"
+                onClick={() => navigate("/analytics")}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[0_0_20px_hsl(280_100%_70%/0.5)] transition-all"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Аналитика
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {children}
 
