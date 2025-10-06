@@ -1,15 +1,30 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Settings } from "lucide-react";
+import { api, Profile } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const Profiles = () => {
-  // Mock profiles data
-  const profiles = [
-    { name: "Admin", messages: 145, phone: "+7 999 123 4567" },
-    { name: "Olinda", messages: 89, phone: "+7 999 765 4321" },
-    { name: "Ivan", messages: 203, phone: "+7 999 555 1234" },
-    { name: "Test", messages: 12, phone: "+7 999 888 9999" },
-  ];
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadProfiles();
+  }, []);
+
+  const loadProfiles = async () => {
+    try {
+      const data = await api.getProfiles();
+      setProfiles(data);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить профили. Проверьте подключение к серверу.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card className="border-border bg-card/50 backdrop-blur">
@@ -32,7 +47,7 @@ const Profiles = () => {
                   <h3 className="font-semibold">{profile.name}</h3>
                   <p className="text-sm text-muted-foreground">{profile.phone}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Отправлено сообщений: {profile.messages}
+                    Отправлено сообщений: {profile.messages_sent}
                   </p>
                 </div>
               </div>

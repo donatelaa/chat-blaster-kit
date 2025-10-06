@@ -88,7 +88,8 @@ class WhatsAppSender:
         
         options = webdriver.ChromeOptions()
         options.add_argument(f"user-data-dir={profile_path}")
-        options.add_argument("--headless")  # Run in background
+        # Don't use headless for sending - may cause issues
+        # options.add_argument("--headless")
         
         try:
             driver = webdriver.Chrome(options=options)

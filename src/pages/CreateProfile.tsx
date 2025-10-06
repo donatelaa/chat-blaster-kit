@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const CreateProfile = () => {
   const [profileName, setProfileName] = useState("");
@@ -23,15 +24,31 @@ const CreateProfile = () => {
 
     setIsCreating(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const result = await api.createProfile(profileName);
+      
+      if (result.success) {
+        toast({
+          title: "Профиль создан!",
+          description: `Профиль "${profileName}" успешно создан. Отсканируйте QR-код в открывшемся окне Chrome.`,
+        });
+        setProfileName("");
+      } else {
+        toast({
+          title: "Ошибка",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Профиль создан!",
-        description: `Профиль "${profileName}" успешно создан`,
+        title: "Ошибка подключения",
+        description: "Не удалось подключиться к серверу. Убедитесь, что Python бэкенд запущен.",
+        variant: "destructive",
       });
-      setProfileName("");
+    } finally {
       setIsCreating(false);
-    }, 2000);
+    }
   };
 
   return (

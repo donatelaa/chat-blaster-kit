@@ -1,30 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Send as SendIcon, Plus } from "lucide-react";
+import { Send as SendIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api, Profile } from "@/lib/api";
 
 const Send = () => {
   const [selectedProfile, setSelectedProfile] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [message, setMessage] = useState("");
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
 
-  // Mock profiles data
-  const profiles = ["Admin", "Olinda", "Ivan", "Test"];
+  useEffect(() => {
+    loadProfiles();
+  }, []);
 
-  const handleAddNumber = () => {
-    toast({
-      title: "Номер добавлен",
-      description: `Номер ${phoneNumber} добавлен в список`,
-    });
+  const loadProfiles = async () => {
+    try {
+      const data = await api.getProfiles();
+      setProfiles(data);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить профили. Проверьте подключение к серверу.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!selectedProfile || !phoneNumber || !message) {
       toast({
         title: "Ошибка",
@@ -34,14 +44,34 @@ const Send = () => {
       return;
     }
 
-    toast({
-      title: "Сообщение отправлено!",
-      description: `Сообщение отправлено на номер ${phoneNumber}`,
-    });
+    setIsSending(true);
 
-    // Reset form
-    setPhoneNumber("");
-    setMessage("");
+    try {
+      const result = await api.sendMessage(selectedProfile, phoneNumber, message);
+      
+      if (result.success) {
+        toast({
+          title: "Сообщение отправлено!",
+          description: `Сообщение отправлено на номер ${phoneNumber}`,
+        });
+        setPhoneNumber("");
+        setMessage("");
+      } else {
+        toast({
+          title: "Ошибка отправки",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка подключения",
+        description: "Не удалось отправить сообщение. Проверьте подключение к серверу.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -62,8 +92,8 @@ const Send = () => {
             </SelectTrigger>
             <SelectContent>
               {profiles.map((profile) => (
-                <SelectItem key={profile} value={profile}>
-                  {profile}
+                <SelectItem key={profile.name} value={profile.name}>
+                  {profile.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -73,18 +103,7 @@ const Send = () => {
         {selectedProfile && (
           <>
             <div className="space-y-2">
-              <Label className="flex items-center justify-between">
-                Номер телефона
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAddNumber}
-                  disabled={!phoneNumber}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Добавить
-                </Button>
-              </Label>
+              <Label>Номер телефона</Label>
               <Input
                 type="tel"
                 placeholder="+7 999 123 4567"
@@ -111,10 +130,10 @@ const Send = () => {
               className="w-full"
               size="lg"
               onClick={handleSendMessage}
-              disabled={!phoneNumber || !message}
+              disabled={!phoneNumber || !message || isSending}
             >
               <SendIcon className="mr-2 h-4 w-4" />
-              Отправить сообщение
+              {isSending ? "Отправка..." : "Отправить сообщение"}
             </Button>
           </>
         )}

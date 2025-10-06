@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { MessageSquare, Send, Clock } from "lucide-react";
+import { MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api, Profile } from "@/lib/api";
 
 const MassSend = () => {
   const [numbers, setNumbers] = useState("");
@@ -15,10 +16,26 @@ const MassSend = () => {
   const [profileMessages, setProfileMessages] = useState<{ [key: string]: string }>({});
   const [delay, setDelay] = useState([30]);
   const [randomDelay, setRandomDelay] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
 
-  // Mock profiles
-  const profiles = ["Admin", "Olinda", "Ivan", "Test"];
+  useEffect(() => {
+    loadProfiles();
+  }, []);
+
+  const loadProfiles = async () => {
+    try {
+      const data = await api.getProfiles();
+      setProfiles(data);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить профили. Проверьте подключение к серверу.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleProfileToggle = (profile: string) => {
     setSelectedProfiles((prev) =>
@@ -30,7 +47,7 @@ const MassSend = () => {
     setProfileMessages((prev) => ({ ...prev, [profile]: message }));
   };
 
-  const handleStartMassSend = () => {
+  const handleStartMassSend = async () => {
     if (selectedProfiles.length === 0) {
       toast({
         title: "Ошибка",
@@ -59,10 +76,49 @@ const MassSend = () => {
       return;
     }
 
-    toast({
-      title: "Массовая рассылка запущена!",
-      description: `Рассылка началась с задержкой ${randomDelay ? "случайной" : delay[0] + " сек"}`,
-    });
+    setIsSending(true);
+
+    try {
+      const phoneNumbers = numbers
+        .split("\n")
+        .map((n) => n.trim())
+        .filter((n) => n);
+
+      const profilesConfig: Record<string, string> = {};
+      selectedProfiles.forEach((profile) => {
+        profilesConfig[profile] = profileMessages[profile];
+      });
+
+      const delayConfig = {
+        random: randomDelay,
+        delay: delay[0],
+      };
+
+      toast({
+        title: "Массовая рассылка запущена!",
+        description: `Рассылка началась. Это может занять некоторое время...`,
+      });
+
+      const result = await api.massSend(phoneNumbers, profilesConfig, delayConfig);
+
+      if (result.success) {
+        toast({
+          title: "Рассылка завершена!",
+          description: `Отправлено: ${result.sent} из ${result.total} сообщений`,
+        });
+        setNumbers("");
+        setSelectedProfiles([]);
+        setProfileMessages({});
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка рассылки",
+        description: "Не удалось выполнить массовую рассылку. Проверьте подключение к серверу.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -133,26 +189,26 @@ const MassSend = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {profiles.map((profile) => (
-            <Card key={profile} className="border-border bg-secondary/30">
+            <Card key={profile.name} className="border-border bg-secondary/30">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id={profile}
-                    checked={selectedProfiles.includes(profile)}
-                    onCheckedChange={() => handleProfileToggle(profile)}
+                    id={profile.name}
+                    checked={selectedProfiles.includes(profile.name)}
+                    onCheckedChange={() => handleProfileToggle(profile.name)}
                   />
                   <Label
-                    htmlFor={profile}
+                    htmlFor={profile.name}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                   >
-                    {profile}
+                    {profile.name}
                   </Label>
                 </div>
-                {selectedProfiles.includes(profile) && (
+                {selectedProfiles.includes(profile.name) && (
                   <Textarea
-                    placeholder={`Сообщение для профиля ${profile}...`}
-                    value={profileMessages[profile] || ""}
-                    onChange={(e) => handleProfileMessageChange(profile, e.target.value)}
+                    placeholder={`Сообщение для профиля ${profile.name}...`}
+                    value={profileMessages[profile.name] || ""}
+                    onChange={(e) => handleProfileMessageChange(profile.name, e.target.value)}
                     className="min-h-[80px] bg-background border-border resize-none"
                   />
                 )}
@@ -166,10 +222,10 @@ const MassSend = () => {
         className="w-full"
         size="lg"
         onClick={handleStartMassSend}
-        disabled={selectedProfiles.length === 0}
+        disabled={selectedProfiles.length === 0 || isSending}
       >
         <Send className="mr-2 h-4 w-4" />
-        Запустить массовую рассылку
+        {isSending ? "Отправка..." : "Запустить массовую рассылку"}
       </Button>
     </div>
   );
