@@ -23,10 +23,22 @@ def get_profiles():
     
     for profile in profiles:
         stats = sender.get_profile_stats(profile)
+        
+        # Try to read phone from profile_info.json
+        phone = "N/A"
+        profile_info_path = os.path.join('profiles', profile, 'profile_info.json')
+        if os.path.exists(profile_info_path):
+            try:
+                with open(profile_info_path, 'r') as f:
+                    info = json.load(f)
+                    phone = info.get('phone', 'N/A')
+            except:
+                pass
+        
         profile_data.append({
             "name": profile,
             "messages_sent": stats.get("messages_sent", 0),
-            "phone": "N/A"  # Can be extended to store phone numbers
+            "phone": phone
         })
     
     return jsonify({"profiles": profile_data})
