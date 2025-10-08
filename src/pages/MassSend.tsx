@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Image as ImageIcon, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api, Profile } from "@/lib/api";
 
@@ -14,6 +14,8 @@ const MassSend = () => {
   const [numbers, setNumbers] = useState("");
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMessages, setProfileMessages] = useState<{ [key: string]: string }>({});
+  const [profileImages, setProfileImages] = useState<{ [key: string]: File | null }>({});
+  const [profileAudios, setProfileAudios] = useState<{ [key: string]: File | null }>({});
   const [delay, setDelay] = useState([30]);
   const [randomDelay, setRandomDelay] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -47,6 +49,14 @@ const MassSend = () => {
     setProfileMessages((prev) => ({ ...prev, [profile]: message }));
   };
 
+  const handleProfileImageChange = (profile: string, file: File | null) => {
+    setProfileImages((prev) => ({ ...prev, [profile]: file }));
+  };
+
+  const handleProfileAudioChange = (profile: string, file: File | null) => {
+    setProfileAudios((prev) => ({ ...prev, [profile]: file }));
+  };
+
   const handleStartMassSend = async () => {
     if (selectedProfiles.length === 0) {
       toast({
@@ -66,11 +76,13 @@ const MassSend = () => {
       return;
     }
 
-    const hasMessages = selectedProfiles.every((profile) => profileMessages[profile]);
-    if (!hasMessages) {
+    const hasContent = selectedProfiles.every((profile) => 
+      profileMessages[profile] || profileImages[profile] || profileAudios[profile]
+    );
+    if (!hasContent) {
       toast({
         title: "Ошибка",
-        description: "Добавьте сообщения для всех выбранных профилей",
+        description: "Добавьте контент (текст, фото или аудио) для всех выбранных профилей",
         variant: "destructive",
       });
       return;
@@ -99,7 +111,7 @@ const MassSend = () => {
         description: `Рассылка началась. Это может занять некоторое время...`,
       });
 
-      const result = await api.massSend(phoneNumbers, profilesConfig, delayConfig);
+      const result = await api.massSend(phoneNumbers, profilesConfig, delayConfig, profileImages, profileAudios);
 
       if (result.success) {
         toast({
@@ -205,12 +217,48 @@ const MassSend = () => {
                   </Label>
                 </div>
                 {selectedProfiles.includes(profile.name) && (
-                  <Textarea
-                    placeholder={`Сообщение для профиля ${profile.name}...`}
-                    value={profileMessages[profile.name] || ""}
-                    onChange={(e) => handleProfileMessageChange(profile.name, e.target.value)}
-                    className="min-h-[80px] bg-background border-border resize-none"
-                  />
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder={`Сообщение для профиля ${profile.name}...`}
+                      value={profileMessages[profile.name] || ""}
+                      onChange={(e) => handleProfileMessageChange(profile.name, e.target.value)}
+                      className="min-h-[80px] bg-background border-border resize-none"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById(`image-${profile.name}`)?.click()}
+                      >
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        {profileImages[profile.name] ? profileImages[profile.name]?.name : 'Фото'}
+                      </Button>
+                      <input
+                        id={`image-${profile.name}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleProfileImageChange(profile.name, e.target.files?.[0] || null)}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById(`audio-${profile.name}`)?.click()}
+                      >
+                        <Mic className="mr-2 h-4 w-4" />
+                        {profileAudios[profile.name] ? profileAudios[profile.name]?.name : 'Аудио'}
+                      </Button>
+                      <input
+                        id={`audio-${profile.name}`}
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => handleProfileAudioChange(profile.name, e.target.files?.[0] || null)}
+                      />
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

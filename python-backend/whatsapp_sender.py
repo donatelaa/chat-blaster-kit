@@ -79,8 +79,8 @@ class WhatsAppSender:
         )
         print("Login successful!")
     
-    def send_message(self, profile_name, phone_number, message):
-        """Send a single message"""
+    def send_message(self, profile_name, phone_number, message, image_path=None, audio_path=None):
+        """Send a single message with optional media"""
         profile_path = os.path.join(PROFILES_DIR, profile_name)
         
         if not os.path.exists(profile_path):
@@ -100,20 +100,57 @@ class WhatsAppSender:
             
             self.wait_for_login(driver)
             
-            # Wait for message box
             wait = WebDriverWait(driver, 60)
-            msg_box = wait.until(EC.presence_of_element_located(
-                (By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]')
-            ))
             
-            # Send message
-            msg_box.clear()
-            msg_box.send_keys(message)
-            time.sleep(1)
-            msg_box.send_keys(Keys.RETURN)
+            # Send image if provided
+            if image_path and os.path.exists(image_path):
+                attach_btn = wait.until(EC.presence_of_element_located(
+                    (By.XPATH, '//div[@title="Attach"]')
+                ))
+                attach_btn.click()
+                time.sleep(1)
+                
+                image_input = driver.find_element(By.XPATH, '//input[@accept="image/*,video/mp4,video/3gpp,video/quicktime"]')
+                image_input.send_keys(image_path)
+                time.sleep(2)
+                
+                send_btn = wait.until(EC.presence_of_element_located(
+                    (By.XPATH, '//span[@data-icon="send"]')
+                ))
+                send_btn.click()
+                time.sleep(3)
+            
+            # Send audio if provided
+            if audio_path and os.path.exists(audio_path):
+                attach_btn = wait.until(EC.presence_of_element_located(
+                    (By.XPATH, '//div[@title="Attach"]')
+                ))
+                attach_btn.click()
+                time.sleep(1)
+                
+                audio_input = driver.find_element(By.XPATH, '//input[@accept="*"]')
+                audio_input.send_keys(audio_path)
+                time.sleep(2)
+                
+                send_btn = wait.until(EC.presence_of_element_located(
+                    (By.XPATH, '//span[@data-icon="send"]')
+                ))
+                send_btn.click()
+                time.sleep(3)
+            
+            # Send text message if provided
+            if message:
+                msg_box = wait.until(EC.presence_of_element_located(
+                    (By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]')
+                ))
+                
+                msg_box.clear()
+                msg_box.send_keys(message)
+                time.sleep(1)
+                msg_box.send_keys(Keys.RETURN)
+                time.sleep(3)
             
             print(f"Message sent to {phone_number}")
-            time.sleep(3)
             
             driver.quit()
             
@@ -126,14 +163,16 @@ class WhatsAppSender:
             self.log_message(profile_name, phone_number, "failed")
             return {"success": False, "message": f"Error: {str(e)}"}
     
-    def mass_send(self, phone_numbers, profiles_config, delay_config):
+    def mass_send(self, phone_numbers, profiles_config, delay_config, profile_images=None, profile_audios=None):
         """
-        Send messages to multiple recipients
+        Send messages to multiple recipients with optional media
         
         Args:
             phone_numbers: List of phone numbers
             profiles_config: Dict with profile names as keys and messages as values
             delay_config: Dict with 'random' boolean and 'delay' int (seconds)
+            profile_images: Dict with profile names as keys and image paths as values
+            profile_audios: Dict with profile names as keys and audio paths as values
         """
         import random
         
@@ -145,9 +184,11 @@ class WhatsAppSender:
             # Select profile (rotating)
             profile = profile_names[profile_index % len(profile_names)]
             message = profiles_config[profile]
+            image_path = profile_images.get(profile) if profile_images else None
+            audio_path = profile_audios.get(profile) if profile_audios else None
             
-            # Send message
-            result = self.send_message(profile, phone, message)
+            # Send message with media
+            result = self.send_message(profile, phone, message, image_path, audio_path)
             results.append({
                 "phone": phone,
                 "profile": profile,

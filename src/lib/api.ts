@@ -45,11 +45,23 @@ export const api = {
   },
 
   // Send single message
-  async sendMessage(profile: string, phone: string, message: string): Promise<{ success: boolean; message: string }> {
+  async sendMessage(
+    profile: string, 
+    phone: string, 
+    message: string, 
+    image?: File | null, 
+    audio?: File | null
+  ): Promise<{ success: boolean; message: string }> {
+    const formData = new FormData();
+    formData.append('profile', profile);
+    formData.append('phone', phone);
+    formData.append('message', message);
+    if (image) formData.append('image', image);
+    if (audio) formData.append('audio', audio);
+
     const response = await fetch(`${API_BASE_URL}/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile, phone, message }),
+      body: formData,
     });
     return response.json();
   },
@@ -58,16 +70,30 @@ export const api = {
   async massSend(
     phoneNumbers: string[],
     profilesConfig: Record<string, string>,
-    delayConfig: { random: boolean; delay: number }
+    delayConfig: { random: boolean; delay: number },
+    profileImages?: { [key: string]: File | null },
+    profileAudios?: { [key: string]: File | null }
   ): Promise<{ success: boolean; results: any[]; total: number; sent: number }> {
+    const formData = new FormData();
+    formData.append('phone_numbers', JSON.stringify(phoneNumbers));
+    formData.append('profiles_config', JSON.stringify(profilesConfig));
+    formData.append('delay_config', JSON.stringify(delayConfig));
+    
+    if (profileImages) {
+      Object.entries(profileImages).forEach(([profile, file]) => {
+        if (file) formData.append(`image_${profile}`, file);
+      });
+    }
+    
+    if (profileAudios) {
+      Object.entries(profileAudios).forEach(([profile, file]) => {
+        if (file) formData.append(`audio_${profile}`, file);
+      });
+    }
+
     const response = await fetch(`${API_BASE_URL}/mass-send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone_numbers: phoneNumbers,
-        profiles_config: profilesConfig,
-        delay_config: delayConfig,
-      }),
+      body: formData,
     });
     return response.json();
   },

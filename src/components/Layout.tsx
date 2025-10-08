@@ -89,8 +89,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {children}
 
-        <footer className="mt-8 text-center text-sm text-muted-foreground">
-          © 2025 WhatsApp Sender. Все права защищены.
+        <footer className="mt-8 text-center text-sm text-muted-foreground space-y-1">
+          <p>© 2025 WhatsApp Sender. Все права защищены.</p>
+          <p>
+            Контакт разработчика:{" "}
+            <a 
+              href="https://t.me/lleeellll" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary-glow transition-colors underline"
+            >
+              @lleeellll
+            </a>
+          </p>
         </footer>
       </div>
     </div>

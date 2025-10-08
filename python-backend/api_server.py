@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from whatsapp_sender import WhatsAppSender
 import os
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -50,37 +51,103 @@ def create_profile():
 
 @app.route('/api/send', methods=['POST'])
 def send_message():
-    """Send a single message"""
-    data = request.json
-    profile = data.get('profile')
-    phone = data.get('phone')
-    message = data.get('message')
-    
-    if not all([profile, phone, message]):
-        return jsonify({"error": "Missing required fields"}), 400
-    
-    result = sender.send_message(profile, phone, message)
-    
-    if result["success"]:
+    """Send a single WhatsApp message with optional media"""
+    try:
+        profile = request.form.get('profile')
+        phone = request.form.get('phone')
+        message = request.form.get('message', '')
+        
+        if not all([profile, phone]):
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields'
+            }), 400
+        
+        # Handle image upload
+        image_path = None
+        if 'image' in request.files:
+            image = request.files['image']
+            if image.filename:
+                image_path = os.path.join('uploads', f"{profile}_{phone}_{image.filename}")
+                os.makedirs('uploads', exist_ok=True)
+                image.save(image_path)
+        
+        # Handle audio upload
+        audio_path = None
+        if 'audio' in request.files:
+            audio = request.files['audio']
+            if audio.filename:
+                audio_path = os.path.join('uploads', f"{profile}_{phone}_{audio.filename}")
+                os.makedirs('uploads', exist_ok=True)
+                audio.save(audio_path)
+        
+        result = sender.send_message(profile, phone, message, image_path, audio_path)
+        
+        # Clean up uploaded files
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+        
         return jsonify(result)
-    else:
-        return jsonify(result), 400
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
 
 
 @app.route('/api/mass-send', methods=['POST'])
 def mass_send():
-    """Send messages to multiple recipients"""
-    data = request.json
-    phone_numbers = data.get('phone_numbers', [])
-    profiles_config = data.get('profiles_config', {})
-    delay_config = data.get('delay_config', {"random": False, "delay": 30})
+    """Send messages to multiple recipients with optional media"""
+    try:
+        phone_numbers = json.loads(request.form.get('phone_numbers', '[]'))
+        profiles_config = json.loads(request.form.get('profiles_config', '{}'))
+        delay_config = json.loads(request.form.get('delay_config', '{"random": false, "delay": 30}'))
+        
+        if not phone_numbers or not profiles_config:
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields'
+            }), 400
+        
+        # Handle image uploads for each profile
+        profile_images = {}
+        profile_audios = {}
+        
+        for key in request.files:
+            file = request.files[key]
+            if key.startswith('image_'):
+                profile = key.replace('image_', '')
+                image_path = os.path.join('uploads', f"{profile}_mass_{file.filename}")
+                os.makedirs('uploads', exist_ok=True)
+                file.save(image_path)
+                profile_images[profile] = image_path
+            elif key.startswith('audio_'):
+                profile = key.replace('audio_', '')
+                audio_path = os.path.join('uploads', f"{profile}_mass_{file.filename}")
+                os.makedirs('uploads', exist_ok=True)
+                file.save(audio_path)
+                profile_audios[profile] = audio_path
+        
+        result = sender.mass_send(phone_numbers, profiles_config, delay_config, profile_images, profile_audios)
+        
+        # Clean up uploaded files
+        for path in profile_images.values():
+            if os.path.exists(path):
+                os.remove(path)
+        for path in profile_audios.values():
+            if os.path.exists(path):
+                os.remove(path)
+        
+        return jsonify(result)
     
-    if not phone_numbers or not profiles_config:
-        return jsonify({"error": "Missing required fields"}), 400
-    
-    result = sender.mass_send(phone_numbers, profiles_config, delay_config)
-    
-    return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
 
 
 @app.route('/api/analytics', methods=['GET'])
